@@ -14,7 +14,7 @@ Here is a rough definition of the _PyON_:
 
 {{{
     <pyon> ::= <expr>
-    <pyon> ::= <assign>1  ... <assign>n <expr>
+    <pyon> ::= <assign>  ... <assign> <expr>
     <assign> ::= <name> = <expr> <newline> 
     <expr> ::= <int>
     <expr> ::= <bool>
@@ -31,7 +31,7 @@ Here is a rough definition of the _PyON_:
     <dict> ::= { <expr> : <expr>, ..., <expr> : <expr> } 
     <instance> ::= <name> ( <args>, <kw>, <starargs>, <starkw> ) 
     <args> ::=  <pyon_expr>, ..., <pyon_expr> 
-    <kw> := <name> = <pyon_expr>, ..., <name> = <pyon_expr> 
+    <kw> := <name> = <expr>, ..., <name> = <expr> 
     <starargs> ::= *<list>
     <starargs> ::= *<tuple> 
     <starkw> ::= **<dict> 
