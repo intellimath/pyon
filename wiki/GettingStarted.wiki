@@ -253,9 +253,9 @@ All time values are in sec.
 
 ==TODO==
 
-* More testing
-* More examples
-* More documentation
+   * More testing
+   * More examples
+   * More documentation
 
 If concept of _PyON_ stand the test of time:
     * specification
