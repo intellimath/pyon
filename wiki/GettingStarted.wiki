@@ -184,7 +184,16 @@ All tests and examples are available in `test` and `examples` directories of the
 There are limitations:
     * state of objects produced by `__getstate__` or `__reduce__` must be a plain dicts;
     * extension objects didn't take in mind.
- 
+
+==Security considerations==
+
+Process of object reconstruction bases on AST and don't use `eval` anyway. 
+
+Restrictions for name resolving can be provided with the help of the right resolver function.
+
+Built-in name resolver bases on `sys._getframe(1)`'s `f_globals` and `f_locals` mappings and can't be considered secure for all cases.
+
+
 ==Сomparative assessment of productivity==
 
 ===1. Compare to pickle===
@@ -223,6 +232,8 @@ pickle loads: 0.280999898911
 }}}
 
 ===2. Compare to json===
+
+Module `json` from python 3.0 was used here.
 
 {{{
 json_lst = []
