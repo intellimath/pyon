@@ -37,7 +37,11 @@ Here is a rough definition of the _PyON_:
     <starkw> ::= **<dict> 
 }}}
 
-Python package `pyon` implements _PyON_. It's a native python implementation on the top of `ast` module and `pickle` protocol 3. Current implementation should consider as a "proof of concept". It written and mostly tested with Python 3.0.
+Python package `pyon` implements _PyON_. 
+
+It's a native python implementation on the top of `ast` module and `pickle` protocol 3. 
+
+Current implementation should consider as a "proof of concept". It written and mostly tested with Python 3.0.
 
 ==Examples==
 
@@ -160,7 +164,6 @@ class A2(object):
 ...   )
 ... )""", flag=True)
 >>>  ob.y.kind
-
 'A1'
 >>> ob = pyon.loads("""
 ... A(x=1,
@@ -239,9 +242,9 @@ All time values are in sec.
 
 ==TODO==
 
-More testing
-More examples
-More documentation
+* More testing
+* More examples
+* More documentation
 
 If concept of _PyON_ stand the test of time:
     * specification
