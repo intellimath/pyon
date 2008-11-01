@@ -1,0 +1,248 @@
+#labels Featured
+=Python Object Notation (_PyON_)=
+
+Python 2.6/3.0 now has a module `ast`. This opens up new opportunities. One of them is the possibility of introducing human readable/writable literal object notation, based on the syntax of the python language.
+
+
+Let's introduce literal object notation for objects using python syntax (_PyON_).
+
+ 
+Built-in types (`int`, `float`, `bool`, `string`, `list`, `tuple`, `dict`) are presented in accordance with the language syntax notation.  Class instances are represented using the syntax notation of function call.
+
+ 
+Here is a rough definition of the _PyON_:
+
+{{{
+    <pyon> ::= <expr>
+    <pyon> ::= <assign>1  ... <assign>n <expr>
+    <assign> ::= <name> = <expr> <newline> 
+    <expr> ::= <int>
+    <expr> ::= <bool>
+    <expr> ::= <string>
+    <expr> ::= <float>
+    <expr> ::= <list>
+    <expr> ::= <tuple>
+    <expr> ::= <dict>
+    <expr> ::= <instance>
+    <expr> ::= <name>
+    <expr> ::= <name>.<name> ... .<name>
+    <list> ::= [ <expr>, ..., <expr> ] 
+    <tuple> ::= ( <expr>, ..., <expr> ) 
+    <dict> ::= { <expr> : <expr>, ..., <expr> : <expr> } 
+    <instance> ::= <name> ( <args>, <kw>, <starargs>, <starkw> ) 
+    <args> ::=  <pyon_expr>, ..., <pyon_expr> 
+    <kw> := <name> = <pyon_expr>, ..., <name> = <pyon_expr> 
+    <starargs> ::= *<list>
+    <starargs> ::= *<tuple> 
+    <starkw> ::= **<dict> 
+}}}
+
+Python package `pyon` implements _PyON_. It's a native python implementation on the top of `ast` module and `pickle` protocol 3. Current implementation should consider as a "proof of concept". It written and mostly tested with Python 3.0.
+
+==Examples==
+
+First import from the package `pyon` utility functions:
+
+{{{
+    >>> from pyon import dumps, loads 
+}}}
+
+{{{
+dumps(ob)
+    Dump object to PyON string representation.
+
+loads(source, __resolver__=None, **kw)
+    load object from source (string or AST);
+    `__resolver__` is a function to resolve names in expressions, keyword arguments are considered as additional dictionary for resolving names;
+    if `__resolver__` argument is absent then the built-in in `pyon` resolver will use.
+}}}
+
+===1. Simple class with attributes===
+
+{{{
+class C(object):
+  pass
+
+>>> c = pyon.loads("C(a=1,b='PyON',c=[1,2])")
+>>> type(c) == C
+True
+>>> c.a, c.b, c.c
+(1, 'PyON', [1, 2])
+}}}
+
+===2. Simple class with attributes and sequence properties===
+
+{{{
+class C(list):
+   pass       
+
+>>> c = pyon.loads("C(a=1,b=2, *['a','b','c'])")
+>>> c.a, c.b
+(1, 2)
+>>> c[0], c[1], c[2]
+('a', 'b', 'c')
+}}}
+
+===3. Simple class with attributes and mapping properties===
+
+{{{
+class C(dict): 
+   pass        
+
+>>> c = pyon.loads("C(a=1,b=2, **{'a':1, 'b':2, 'c':3})") 
+>>> c.a, c.b 
+(1, 2) 
+>>> c['a'], c['b'], c['c'] 
+(1, 2, 3) 
+}}}
+
+===4. Class with sequence and mapping properties===
+
+{{{
+class Element(object): 
+    def __init__(self, tag): 
+        self._tag = tag 
+        self._children = [] 
+        self._options = {} 
+    def __setstate__(self, state): 
+        self.__dict__.update(state) 
+    def append(self, e): 
+        self._children.append(e) 
+    def __setitem__(self, key, item): 
+        self._options[key] = item 
+
+>>> c = pyon.loads("Element('father', name='bill', *[Element('child1'), Element('child2')], **{'gen': 1, 'out': 'stdout'})") 
+>>> c._tag, c.name 
+('father', 'bill') 
+>>> c._children[0]._tag, c._children[1]._tag 
+('child1', 'child2') 
+>>> c._options 
+{'gen': 1, 'out': 'stdout'} 
+}}}
+
+===5. Simple graph===
+
+{{{
+class Author(object):
+    def __init__(self, name):
+        self.name = name
+class Article(object):
+    pass
+
+>>> c = pyon.loads("""
+... author = Author('the author')
+... [ Article(author=author, title='Title1'), 
+...   Article(author=author, title='Title2'), 
+...   Article(author=author, title='Title3')]
+... """)
+>>> c[0].author == c[1].author == c[2].author
+True
+>>> c[0].title, c[1].title, c[2].title
+('Title1', 'Title2', 'Title3')
+}}}
+
+===6. Object template example===
+
+{{{
+class A(object):
+    pass 
+class A1(object):
+   pass  
+class A2(object):
+   pass
+  
+>>> ob = pyon.loads("""
+... A(x=1,
+...   y=IF(
+...     flag,
+...     A1(kind='A1'),
+...     A2(kind='A2')
+...   )
+... )""", flag=True)
+>>>  ob.y.kind
+
+'A1'
+>>> ob = pyon.loads("""
+... A(x=1,
+...   y=IF(
+...     flag,
+...     A1(kind='A1'),
+...     A2(kind='A2')
+...   )
+... )""", flag=False)
+>>>  ob.y.kind
+'A2'
+}}}
+
+All tests and examples are available in `test` and `examples` directories of the `pyon` package.
+
+==Limitations==
+
+There are limitations:
+    * state of objects produced by `__getstate__` or `__reduce__` must be a plain dicts;
+    * extension objects didn't take in mind.
+ 
+==Сomparative assessment of productivity==
+
+===1. Compare to pickle===
+
+{{{
+class C(object):
+   def __init__(self, count):
+      self.count = count
+   #
+   def __reduce__(self):
+      _dict = {'name':self.name, 'age':self.age}
+      try:
+          _dict['child'] = self.child
+      except:
+           pass
+      return C, (self.count,), _dict
+
+
+lst = []
+for i in range(10000):
+   c = C(i)
+   c.name = "aaa" + str(i)
+   c.age = 100*i % 37
+   c.child = C(i)
+   c.child.name = "bbb" + str(i)
+   c.child.age = 101*i % 37
+   lst.append(c)
+}}}
+
+{{{
+pyon dumps: 0.436999797821
+pyon loads: 0.75
+without ast part: 0.358999967575
+pickle loads: 0.18799996376
+pickle loads: 0.280999898911
+}}}
+
+===2. Compare to json===
+
+{{{
+json_lst = []
+for i in range(10000):
+   c= {'name':"aaa" + str(i), 'count':i, 'age': 100*i % 37, 'child': {'name':"bbb" + str(i), 'count':i, 'age':101*i % 37}}
+   json_lst.append(c)
+}}}
+
+{{{
+json dumps: 0.875
+json loads: 3.0150001049
+pyon dumps: 0.734999895096
+pyon dumps: 2.28100013733
+}}}
+
+All time values are in sec.
+
+==TODO==
+
+More testing
+More examples
+More documentation
+
+If concept of _PyON_ stand the test of time:
+    * specification
+    * C accelerator
