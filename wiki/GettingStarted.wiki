@@ -181,9 +181,9 @@ class A2(object):
 
 ==Examples with dumps==
 
-{{{
 ===1. Example with assignments==
 
+{{{
 >>> p1 = (1,2)
 >>> p2 = [1,2]    
 >>> pyon.dumps([p1,p2,p1,p2], fast=False)
@@ -191,6 +191,22 @@ _p__0=(1,2)
 _p__1=[1,2]
 [_p__0,_p__1,_p__0,_p__1], pyon.dumps([p1,p2,p1,p2], fast=False))
 }}}
+
+===2. Example with class with attributes===
+
+{{{
+class C(object):
+    def __reduce__(self):
+        return C, (), self.__dict__
+
+>>> c = C()
+>>> c.a = 1
+>>> c.b = 'python'
+>>> c.c = [1,2]
+>>> pyon.dumps(c)
+C(a=1,c=[1,2],b='python')
+}}}
+
 
 All tests and examples are available in `test` and `examples` directories of the `pyon` package.
 
