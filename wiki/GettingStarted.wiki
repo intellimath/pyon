@@ -43,7 +43,7 @@ It's a native python implementation on the top of `ast` module and `pickle` prot
 
 Current implementation should consider as a "proof of concept". It written and mostly tested with Python 3.0.
 
-==Examples==
+==Utility functions==
 
 First import from the package `pyon` utility functions:
 
@@ -60,6 +60,8 @@ loads(source, __resolver__=None, **kw)
     `__resolver__` is a function to resolve names in expressions, keyword arguments are considered as additional dictionary for resolving names;
     if `__resolver__` argument is absent then the built-in in `pyon` resolver will use.
 }}}
+
+==Examples with loads==
 
 ===1. Simple class with attributes===
 
@@ -177,13 +179,25 @@ class A2(object):
 'A2'
 }}}
 
+==Examples with dumps==
+
+{{{
+===1. Example with assignments==
+
+>>> p1 = (1,2)
+>>> p2 = [1,2]    
+>>> pyon.dumps([p1,p2,p1,p2], fast=False)
+_p__0=(1,2)
+_p__1=[1,2]
+[_p__0,_p__1,_p__0,_p__1], pyon.dumps([p1,p2,p1,p2], fast=False))
+}}}
+
 All tests and examples are available in `test` and `examples` directories of the `pyon` package.
 
 ==Limitations==
 
 There are limitations:
     * state of objects produced by `__getstate__` or `__reduce__` must be a plain dicts;
-    * extension objects didn't take in mind.
 
 ==Security considerations==
 
