@@ -214,6 +214,7 @@ All tests and examples are available in `test` and `examples` directories of the
 
 There are limitations:
     * state of objects produced by `__getstate__` or `__reduce__` must be a plain dicts;
+    * in current implementation `dumps` can represent objects, such that it's graph of dependences has no cycles.
 
 ==Security considerations==
 
