@@ -292,11 +292,11 @@ for i in range(10000):
 }}}
 
 {{{
-pyon dumps: 0.436999797821
-pyon loads: 0.75
-without ast part: 0.358999967575
-pickle loads: 0.18799996376
-pickle loads: 0.280999898911
+pyon dumps: 0.905999898911
+pyon loads: 2.3900001049
+pyon loads without ast part: 0.5
+pickle dumps: 1.5
+pickle loads: 0.93799996376
 }}}
 
 ===2. Compare to json===
@@ -311,10 +311,11 @@ for i in range(10000):
 }}}
 
 {{{
-json dumps: 0.875
-json loads: 3.0150001049
-pyon dumps: 0.734999895096
-pyon dumps: 2.28100013733
+json dumps: 0.952999830246
+json loads: 2.60900020599
+pyon dumps: 0.718999862671
+pyon loads: 4.78100013733
+pyon loads without ast part: 0.43799996376
 }}}
 
 All time values are in sec.
