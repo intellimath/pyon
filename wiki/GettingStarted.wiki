@@ -262,7 +262,7 @@ Restrictions for name resolving can be provided with the help of the right resol
 Built-in name resolver bases on `sys._getframe(1)`'s `f_globals` and `f_locals` mappings and can't be considered secure for all cases.
 
 
-==Сomparative assessment of productivity==
+==Qualitative comparisons of perfomance ==
 
 ===1. Compare to pickle===
 
