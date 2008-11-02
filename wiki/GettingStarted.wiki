@@ -219,6 +219,32 @@ class C(object):
 C(a=1,c=[1,2],b='python')
 }}}
 
+===4. Example with tree-like structure ===
+
+{{{
+class Element(object):
+    def __init__(self, tag):
+        self._tag = tag
+        self._children = []
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+    def append(self, e):
+        self._children.append(e)
+    def __reduce__(self):
+        _dict = dict(self.__dict__)
+        tag = _dict.pop('_tag')
+        children = _dict.pop('_children')
+        return Element, (tag,), _dict, children
+
+>>> father = Element('father')
+>>> father.name='bill'
+>>> child1 = Element('child1')
+>>> child2 = Element('child2')
+>>> father.append(child1)
+>>> father.append(child2)
+>>> pyon.dumps(father)
+Element('father',name='bill',*[Element('child1'),Element('child2')])
+}}}
 
 All tests and examples are available in `test` and `examples` directories of the `pyon` package.
 
