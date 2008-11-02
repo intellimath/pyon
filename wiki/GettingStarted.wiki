@@ -16,6 +16,7 @@ Here is a rough definition of the _PyON_:
     <pyon> ::= <expr>
     <pyon> ::= <assign>  ... <assign> <expr>
     <assign> ::= <name> = <expr> <newline> 
+    <assign> ::= <name> [ <expr> ] = <expr> <newline> 
     <expr> ::= <int>
     <expr> ::= <bool>
     <expr> ::= <string>
