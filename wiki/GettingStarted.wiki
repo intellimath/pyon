@@ -192,7 +192,18 @@ _p__1=[1,2]
 [_p__0,_p__1,_p__0,_p__1], pyon.dumps([p1,p2,p1,p2], fast=False))
 }}}
 
-===2. Example with class with attributes===
+===2. Example with recursive in list===
+
+{{{
+>>> lst = ['foo']
+>>> lst.append(lst)
+>>> pyon.dumps(lst, fast=False)
+_p__0=['foo',None]
+_p__0[1]=_p__0
+_p__0
+}}}
+
+===3. Example with class with attributes===
 
 {{{
 class C(object):
@@ -214,7 +225,6 @@ All tests and examples are available in `test` and `examples` directories of the
 
 There are limitations:
     * state of objects produced by `__getstate__` or `__reduce__` must be a plain dicts;
-    * in current implementation `dumps` can represent objects, such that it's graph of dependences has no cycles.
 
 ==Security considerations==
 
