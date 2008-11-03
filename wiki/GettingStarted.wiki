@@ -193,7 +193,7 @@ _p__1=[1,2]
 [_p__0,_p__1,_p__0,_p__1], pyon.dumps([p1,p2,p1,p2], fast=False))
 }}}
 
-===2. Example with recursive in list===
+===2. Example with recursive list===
 
 {{{
 >>> lst = ['foo']
@@ -204,7 +204,17 @@ _p__0[1]=_p__0
 _p__0
 }}}
 
-===3. Example with class with attributes===
+===3. Example with recursive dict===
+
+>>> d = {'a':'foo'}
+>>> d['b'] = d
+>>> pyon.dumps(d, fast=False)
+
+_p__0={'a':'foo'}
+_p__0['b']=_p__0
+_p__0
+
+===4. Example with class with attributes===
 
 {{{
 class C(object):
@@ -219,7 +229,7 @@ class C(object):
 C(a=1,c=[1,2],b='python')
 }}}
 
-===4. Example with tree-like structure ===
+===5. Example with tree-like structure ===
 
 {{{
 class Element(object):
