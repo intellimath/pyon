@@ -5,8 +5,14 @@ In Javascript _JSON_ is a native literal notation for objecs built-in into the l
 
 The reason for the introduction of this notation lies in the following considerations:
 
-   1. Python now hasn't built-in into the language literal notation for objects representation. 
-   2. Python has great `pickle` module. It allows you to serialize/deserialize python objects that supports _pickle protocol_. But pickle's formats are not suitable for reading/writing human. 
-   3. Python has good `ast` module now. It is possible now to use the python language syntax for the literal representation of objects.
+   1. Python now hasn't built-in into the language literal notation for objects
+      representation. 
+   
+   2. Python has great `pickle` module. It allows you to serialize/deserialize python
+      objects that supports _pickle protocol_. But pickle's formats are not suitable for 
+      reading/writing human. 
+   
+   3. Python has good `ast` module now. It is possible now to use the python language 
+      syntax for the literal representation of objects.
 
 In _PyON_ we have attempted to join the pickle protocol 3 and current syntax of the python language for literal representation of python objects.
