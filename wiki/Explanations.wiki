@@ -1,7 +1,7 @@
 #labels Featured
 Python object notation (_PyON_) is designed to literal representation of objects based on the syntax of the python language.
 
-In JavaScript _JSON_ is a native literal notation for objecs built-in into the language. You can just evaluate _JSON_ string to reconstruct object. 
+In Javascript _JSON_ is a native literal notation for objecs built-in into the language. You can just evaluate _JSON_ string to reconstruct object. 
 
 Python now hasn't built in language literal notation for objects representation. But now
 python has great `pickle` module. It allows you to serialize/deserialize python objects that supports _pickle protocol_. But now formats of object representation in `pickle` are not suitable reading/writing human. Python alsow has good `ast` module now. It is possible now to use the python language syntax for the literal representation of objects.
