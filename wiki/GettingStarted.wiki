@@ -206,6 +206,7 @@ _p__0
 
 ===3. Example with recursive dict===
 
+{{{
 >>> d = {'a':'foo'}
 >>> d['b'] = d
 >>> pyon.dumps(d, fast=False)
@@ -213,8 +214,24 @@ _p__0
 _p__0={'a':'foo'}
 _p__0['b']=_p__0
 _p__0
+}}}
 
-===4. Example with class with attributes===
+===4. Example with recursion in class instance==
+
+{{{
+class C(object):
+    def __reduce__(self):
+        return C, (), self.__dict__
+
+>>> c= C()
+>>> c.parent = c
+>>> pyon.dumps(c, fast=False)
+_p__0=C()
+_p__0.parent=_p__0
+_p__0
+}}}
+
+===5. Example with class with attributes===
 
 {{{
 class C(object):
@@ -229,7 +246,7 @@ class C(object):
 C(a=1,c=[1,2],b='python')
 }}}
 
-===5. Example with tree-like structure ===
+===6. Example with tree-like structure ===
 
 {{{
 class Element(object):
