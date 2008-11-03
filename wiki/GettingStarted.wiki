@@ -53,8 +53,10 @@ First import from the package `pyon` utility functions:
 }}}
 
 {{{
-dumps(ob)
+dumps(ob, fast=True)
     Dump object to PyON string representation.
+    If fast=False then special memo dictionaries for object sharing is used 
+    (it's similar to pickle's non-fast mode). 
 
 loads(source, __resolver__=None, **kw)
     load object from source (string or AST);
