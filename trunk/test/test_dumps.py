@@ -36,7 +36,14 @@ def test_with_assigns1():
     p1 = (1,2)
     p2 = [1,2]    
     assertEqual("_p__0=(1,2)\n_p__1=[1,2]\n[_p__0,_p__1,_p__0,_p__1]", pyon.dumps([p1,p2,p1,p2], fast=False))
+    assertEqual("[(1,2),[1,2],(1,2),[1,2]]", pyon.dumps([p1,p2,p1,p2]))
 
+def test_with_assigns1_1():
+    p1 = (1,2)
+    p2 = [1,2]    
+    assertEqual("[(1,2),[1,2]]", pyon.dumps([p1,p2], fast=False))
+    assertEqual("[(1,2),[1,2],(1,2),[1,2]]", pyon.dumps([p1,p2,p1,p2]))
+    
 def test_with_assigns2():
     lst = ['foo']
     lst.append(lst)
@@ -59,6 +66,16 @@ def test_class1():
 
     c= C()
     assertEqual("C()", pyon.dumps(c))
+
+
+def test_recursive_class():
+    class C(object):
+        def __reduce__(self):
+            return C, (), self.__dict__
+
+    c= C()
+    c.parent = c
+    assertEqual("_p__0=C()\n_p__0.parent=_p__0\n_p__0", pyon.dumps(c, fast=False))
 
 
 def test_class2():
