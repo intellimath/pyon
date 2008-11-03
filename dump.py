@@ -14,7 +14,6 @@ class Cacher(object):
         if type(o) in (NoneType, int, str, bool, float):
             return
         
-
         oId = id(o)
         global objects_cache, objects_info
         if oId in objects_cache:
@@ -212,7 +211,7 @@ class Representor(object):
             else:
                 return '{' + ','.join(self.visit(key) + ':' + self.visit(item) for key,item in o.items()) + '}'
     
-    def visit_object(self, o):
+    def visit_fast_object(self, o):
         if  hasattr(o, '__reduce__'):
             #print(o)
             state = o.__reduce__()
@@ -238,7 +237,7 @@ class Representor(object):
                         name = factory.__name__
                     else:
                         name = factory.__module__ + '.' + factory.__name__
-            return self.with_reduce((name,) + state[1:])
+            return self.with_reduce(o, (name,) + state[1:])
         else:
             newname = o.__class__.__name__
             
@@ -258,9 +257,61 @@ class Representor(object):
                         value = getattr(o, name, null)
                         if value is not null:
                             state[name] = value
-            return self.with_not_reduce((newname, newargs, state))
+            return self.with_not_reduce(o, (newname, newargs, state))
     #
-    def with_reduce(self, state):
+    def visit_object(self, o):
+        if self.fast:
+            return self.visit_fast_object(o)
+        else:
+            oId = id(o)
+            if  hasattr(o, '__reduce__'):
+                #print(o)
+                state = o.__reduce__()
+                factory = state[0]
+                factoryType = factory.__class__
+                cls = o.__class__
+                if factoryType.__module__ == 'builtins':
+                    if isinstance(factory, type):
+                        if cls.__module__ == '__main__':
+                            name = cls.__name__
+                        else:
+                            name = cls.__module__ + '.' + cls.__name__
+                    else:
+                        name = factory.__name__
+                else:
+                    if isinstance(factory, type):
+                        if factoryType.__module__ == '__main__':
+                            name = factory.__name__
+                        else:
+                            name = factoryType.__module__ + '.' + factory.__name__
+                    else:
+                        if factory.__module__ == '__main__':
+                            name = factory.__name__
+                        else:
+                            name = factory.__module__ + '.' + factory.__name__
+                return self.with_reduce(o, (name,) + state[1:])
+            else:
+                newname = o.__class__.__name__
+                
+                newargs = None
+                if hasattr(o, '__getnewargs__'):
+                    newargs = o.__getnewargs__()
+                
+                state = None
+                if hasattr(o, '__getstate__'):
+                    state = o.__getstate__()
+                else:
+                    if hasattr(o, '__dict__'):
+                        state = o.__dict__
+                    else:
+                        state = {}
+                        for name in o.__slots__:
+                            value = getattr(o, name, null)
+                            if value is not null:
+                                state[name] = value
+                return self.with_not_reduce(o, (newname, newargs, state))
+    #
+    def with_reduce(self, o, state):
         n = len(state)
         ret = ''
         if n > 0:
@@ -268,8 +319,11 @@ class Representor(object):
         if n > 1 and state[1]:
             ret += ','.join(self.visit(item) for item in state[1]) + ','
         if n > 2 and state[2]:
-            if isinstance(state[2], dict):
-                ret += ','.join('%s=%s' % (k, self.visit(v)) for k, v in state[2].items()) + ','
+            if isinstance(state[2], dict):                
+                if self.fast:
+                    ret += ','.join('%s=%s' % (k, self.visit(v)) for k, v in state[2].items()) +','
+                else:
+                    ret += self._with_kwargs(o, state[2]) + ','
             else:
                 ret += self.visit(state) + ','
         if n > 3 and state[3]:
@@ -280,6 +334,31 @@ class Representor(object):
             ret = ret[:-1]
         ret += ')'
         return ret
+    #
+    def _with_kwargs(self, o, state):
+        oId = id(o)
+        if oId in objects_cache:
+            n0 = self.reprs[id(o)]
+            _dict = {}
+            dict_cache = []
+            for key,item in state.items():
+                itemId = id(item)
+                if itemId in objects_cache:
+                    dict_cache.append((key, itemId))
+                else:
+                    _dict[key] = item
+            if _dict:
+                oRepr = '{' + ','.join('%s=%s' % (k,self.visit(item)) for k,item in _dict.items()) + '}'
+            else:
+                oRepr = ''
+            if dict_cache:
+                for key, itemId in dict_cache:
+                    n = self.reprs[itemId]
+                    self.post_assigns.append("_p__" + str(n0) + "." + key + "=" +  "_p__" + str(n))
+            return oRepr
+        else:
+            return ','.join('%s=%s' % (k, self.visit(v)) for k, v in state.items())
+        
     #
     def with_not_reduce(self, state):
         n = len(state)
