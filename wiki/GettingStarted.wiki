@@ -149,6 +149,9 @@ True
 ===Example with recursive class and cross-references===
 
 {{{
+class C(object):
+    pass
+
 >>> ob = pyon.loads("""
 ... c = C(parent=c, lst=lst, d=d)
 ... lst = ['foo', lst, d, c]
