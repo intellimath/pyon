@@ -11,6 +11,7 @@ default = object()
 self = object()
 
 class PyonError(Exception): pass
+class PyonResolveError(Exception): pass
 
 def _reconstructor(cls, base, state):
     if base is object:
@@ -45,8 +46,13 @@ def cache_method(name):
 class NodeTransformer(object):    
     #
     def __init__(self, nameResolver):
-        self.cache = {'True':True, 'False':False, 'object':object, 'type': type, '_reconstructor':_reconstructor, 'None':None, 'IF':IF, 'CASE':CASE}
+        self.cache = {
+            'True':True, 'False':False, 
+            'object':object, 'type': type, 
+            'int':int, 'string':str, 'bool':bool, 'float':float,
+            '_reconstructor':_reconstructor, 'None':None, 'IF':IF, 'CASE':CASE}
         self.nameResolver = nameResolver
+        self.post_actions = []
     #
     def visit(self, state):
         name = state.__class__.__name__
@@ -107,7 +113,20 @@ class NodeTransformer(object):
     #
     @cache_method('List')
     def visit_List(self, node):
-        return [self.visit(el) for el in node.elts]
+        lst = []
+        for i, el in enumerate(node.elts):
+            if type(el) == ast.Name:
+                try:
+                    lst.append(self.visit_Name(el))
+                except PyonResolveError:
+                    def setitem(lst=lst, i=i, name=el):
+                        lst[i] = self.visit_Name(name)
+                    lst.append(None)
+                    self.post_actions.append(setitem)
+            else:
+                lst.append(self.visit(el))
+        return lst
+        #return [self.visit(el) for el in node.elts]
     #
     @cache_method('Subscript')
     def visit_Subscript(self, node):
@@ -117,7 +136,21 @@ class NodeTransformer(object):
     #    
     @cache_method('Dict')
     def visit_Dict(self, node):
-        return dict((self.visit(key),self.visit(value)) for key,value in zip(node.keys, node.values))
+        _dict = {}
+        for key,value in zip(node.keys, node.values):
+            _key = self.visit(key)
+            if type(value) == ast.Name:
+                try:
+                    item = self.visit_Name(value)
+                    _dict[_key] = item
+                except PyonResolveError:
+                    def setitem(map=_dict, key=_key, name=value):
+                        map[key] = self.visit_Name(name)
+                    self.post_actions.append(setitem)
+            else:
+                _dict[_key] = self.visit(value)
+        return _dict    
+        #return dict((self.visit(key),self.visit(value)) for key,value in zip(node.keys, node.values))
         
     def visit_pyon(self, callee, *args, **kwargs):
         if callee == IF:
@@ -153,7 +186,18 @@ class NodeTransformer(object):
                 setstate(state)
             else:
                 for keyword in node.keywords:
-                    setattr(instance, keyword.arg, self.visit(keyword.value))
+                    valueTree = keyword.value
+                    if type(valueTree) == ast.Name:
+                        try:
+                            setattr(instance, keyword.arg, self.visit_Name(valueTree))
+                        except PyonResolveError:
+                            def _setattr(instance=instance, attr=keyword.arg, nameEl=valueTree):
+                                setattr(instance, attr, self.visit_Name(nameEl))
+                            self.post_actions.append(_setattr)
+                    else:
+                        setattr(instance, keyword.arg, self.visit(valueTree))
+                    
+                            
 
         if node.starargs:
             starargs = self.visit(node.starargs)
@@ -184,7 +228,7 @@ class NodeTransformer(object):
             self.cache[name] = ob
             return ob
         except:
-            raise RuntimeError("Can't resolve name " + name)
+            raise PyonResolveError("Can't resolve name " + name)
     #
     @cache_method('Str')
     def visit_Str(self, node):
@@ -202,8 +246,12 @@ def loads(source, __resolver__=None, __modules__ = True, **kwargs):
     transformer = NodeTransformer(nameResolver)
     if issubclass(type(source), str):
         tree = ast.parse(source)
-        return transformer.visit(tree)[-1]
+        ob = transformer.visit(tree)[-1]
     elif issubclass(type(source), ast.AST):
-        return transformer.visit(source)[-1]
+        ob = transformer.visit(source)[-1]
     else:
         PyonError('Source must be a string or AST', source)
+    if transformer.post_actions:
+        for action in transformer.post_actions:
+            action()
+    return ob
