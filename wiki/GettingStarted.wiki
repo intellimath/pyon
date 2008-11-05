@@ -53,10 +53,12 @@ First import from the package `pyon` utility functions:
 }}}
 
 {{{
-dumps(ob, fast=True)
+dumps(ob, fast=True, **kwargs)
     Dump object to PyON string representation.
     If fast=False then special memo dictionaries for object sharing is used 
     (it's similar to pickle's non-fast mode). 
+    kwargs defines names for objects( for name:item object item in representation and
+    assignes named as name.
 
 loads(source, __resolver__=None, **kw)
     load object from source (string or AST);
