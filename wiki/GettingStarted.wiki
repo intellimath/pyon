@@ -66,7 +66,7 @@ loads(source, __resolver__=None, **kw)
 
 ==Examples with loads==
 
-===1. Simple class with attributes===
+===Simple class with attributes===
 
 {{{
 class C(object):
@@ -79,7 +79,7 @@ True
 (1, 'PyON', [1, 2])
 }}}
 
-===2. Simple class with attributes and sequence properties===
+===Simple class with attributes and sequence properties===
 
 {{{
 class C(list):
@@ -92,7 +92,7 @@ class C(list):
 ('a', 'b', 'c')
 }}}
 
-===3. Simple class with attributes and mapping properties===
+===Simple class with attributes and mapping properties===
 
 {{{
 class C(dict): 
@@ -105,7 +105,75 @@ class C(dict):
 (1, 2, 3) 
 }}}
 
-===4. Class with sequence and mapping properties===
+===Example with recursive list===
+
+{{{
+>>> lst = pyon.loads("""
+... lst = ['foo', lst]
+... lst""")
+>>> lst is lst[1]
+True
+}}}
+
+===Example with recursive dict===
+
+{{{
+>>> d = pyon.loads("""
+... d = {'a':'foo', 'b':d}
+... d""")
+>>> d is d['b']
+True
+}}}
+
+===Example with cross-references===
+
+{{{
+>>> ob = pyon.loads("""
+... lst = ['foo', lst, d]
+... d = {'a':'foo', 'b':d, 'c':lst}
+... [d, lst]""")
+>>> lst = ob[1]
+>>> d = ob[0]
+>>> lst[1] is lst
+True
+>>> d is d['b']
+True
+>>> lst[2] is d
+True
+>>> d['c'] is lst
+True
+}}}
+
+===Example with recursive class and cross-references===
+
+{{{
+>>> ob = pyon.loads("""
+... c = C(parent=c, lst=lst, d=d)
+... lst = ['foo', lst, d, c]
+... d = {'a':'foo', 'b':d, 'c':lst, 'd':c}
+... [d, lst, c]""")
+>>> lst = ob[1]
+>>> d = ob[0]        
+>>> c = ob[2]
+>>> c.parent is c
+True
+>>> c.lst is lst
+True
+>>> c.d is d
+True
+>>> d is d['b']
+True
+>>> lst[2] is d
+True
+>>> d['c'] is lst
+True
+>>> d['d'] is c
+True
+>>> lst[3] is c
+True
+}}}
+
+===Class with sequence and mapping properties===
 
 {{{
 class Element(object): 
@@ -129,7 +197,7 @@ class Element(object):
 {'gen': 1, 'out': 'stdout'} 
 }}}
 
-===5. Simple graph===
+===Simple graph===
 
 {{{
 class Author(object):
@@ -150,7 +218,7 @@ True
 ('Title1', 'Title2', 'Title3')
 }}}
 
-===6. Object template example===
+===Object template example===
 
 {{{
 class A(object):
@@ -184,7 +252,7 @@ class A2(object):
 
 ==Examples with dumps==
 
-===1. Example with assignments==
+===Example with assignments==
 
 {{{
 >>> p1 = (1,2)
@@ -192,33 +260,40 @@ class A2(object):
 >>> pyon.dumps([p1,p2,p1,p2], fast=False)
 _p__0=(1,2)
 _p__1=[1,2]
-[_p__0,_p__1,_p__0,_p__1], pyon.dumps([p1,p2,p1,p2], fast=False))
+[_p__0,_p__1,_p__0,_p__1]
+>>> pyon.dumps([p1,p2,p1,p2], fast=False, p1=p1,p2=p2)
+p1=(1,2)
+p2=[1,2]
+[p1,p2,p1,p2]
 }}}
 
-===2. Example with recursive list===
+===Example with recursive list===
 
 {{{
 >>> lst = ['foo']
 >>> lst.append(lst)
 >>> pyon.dumps(lst, fast=False)
-_p__0=['foo',None]
-_p__0[1]=_p__0
+_p__0=['foo',_p__0]
 _p__0
+>>> pyon.dumps(lst, fast=False, lst=lst)
+lst=['foo',lst]
+lst
 }}}
 
-===3. Example with recursive dict===
+===Example with recursive dict===
 
 {{{
 >>> d = {'a':'foo'}
 >>> d['b'] = d
 >>> pyon.dumps(d, fast=False)
-
-_p__0={'a':'foo'}
-_p__0['b']=_p__0
+_p__0={'a':'foo', 'b':_p__0}
 _p__0
+>>> pyon.dumps(d, fast=False, d=d)
+d={'a':'foo', 'b':d}
+d
 }}}
 
-===4. Example with recursion in class instance==
+===Example with recursion in class instance==
 
 {{{
 class C(object):
@@ -228,12 +303,37 @@ class C(object):
 >>> c= C()
 >>> c.parent = c
 >>> pyon.dumps(c, fast=False)
-_p__0=C()
-_p__0.parent=_p__0
+_p__0=C(parent=_p__0)
 _p__0
+>>> pyon.dumps(c, fast=False, c=c)
+c=C(parent=c)
+c
 }}}
 
-===5. Example with class with attributes===
+===Example with cross-refernce===
+
+{{{
+class C(object):
+    def __reduce__(self):
+        return C, (), self.__dict__
+
+>>> lst = ['foo']
+>>> lst.append(lst)
+>>> d = {'a':'bar','b':lst}
+>>> d['c'] = d
+>>> c = C()
+>>> c.lst = lst
+>>> c.d = d
+>>> c.parent = c
+>>> d['d'] = c
+>>> pyon.dumps([lst,d,c], fast = False, lst=lst, d=d)
+lst=['foo',lst]
+_p__1=C(lst=lst,d=d,parent=_p__1)
+d={'a':'bar','c':d,'b':lst,'d':_p__1}
+[lst,d,_p__1]
+}}}
+
+===Example with class with attributes===
 
 {{{
 class C(object):
@@ -248,7 +348,7 @@ class C(object):
 C(a=1,c=[1,2],b='python')
 }}}
 
-===6. Example with tree-like structure ===
+===Example with tree-like structure ===
 
 {{{
 class Element(object):
