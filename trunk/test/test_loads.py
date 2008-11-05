@@ -118,6 +118,66 @@ author = Author('the author')
     assertEqual(c[1].title, 'Title2')
     assertEqual(c[2].title, 'Title3')
     
+def test_recursive_list():
+    lst = pyon.loads(
+"""
+lst = ['foo', lst]
+lst
+""")
+    assert lst is lst[1]
+
+def test_recursive_dict():
+    d = pyon.loads(
+"""
+d = {'a':'foo', 'b':d}
+d
+""")
+    assert d is d['b']
+
+def test_cross_reference():
+    ob = pyon.loads(
+"""
+lst = ['foo', lst, d]
+d = {'a':'foo', 'b':d, 'c':lst}
+[d, lst]
+""")
+    lst = ob[1]
+    d = ob[0]
+    assert lst[1] is lst
+    assert d is d['b']
+    assert lst[2] is d
+    assert d['c'] is lst
+
+def test_recursive_class():
+    class C(object):
+        pass
+
+    c = pyon.loads('c=C(parent=c)\nc')
+    assert c.parent is c
+
+def test_cross_reference_class():
+    class C(object):
+        pass
+
+    ob = pyon.loads(
+"""
+c = C(parent=c, lst=lst, d=d)
+lst = ['foo', lst, d, c]
+d = {'a':'foo', 'b':d, 'c':lst, 'd':c}
+[d, lst, c]
+""")
+    lst = ob[1]
+    d = ob[0]        
+    c = ob[2]
+    assert c.parent is c
+    assert c.lst is lst
+    assert c.d is d
+    assert d is d['b']
+    assert lst[2] is d
+    assert d['c'] is lst
+    assert d['d'] is c
+    assert lst[3] is c
+    
 def main():
     for name, func in sys.modules['__main__'].__dict__.items():
         if name.startswith('test_'):

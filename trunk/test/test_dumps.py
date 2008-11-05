@@ -52,12 +52,34 @@ def test_with_assigns2():
 def test_with_assigns3():
     p1 = (1,2)
     p2 = [1,2]    
-    assertEqual("_p__0=(1,2)\n_p__1=[1,2]\n{'a':_p__0,'c':_p__0,'b':_p__1,'d':_p__1}", pyon.dumps({'a':p1,'b':p2,'c':p1,'d':p2}, fast=False))
+    assertEqual(
+        "_p__0=(1,2)\n_p__1=[1,2]\n{'a':_p__0,'c':_p__0,'b':_p__1,'d':_p__1}", 
+        pyon.dumps({'a':p1,'b':p2,'c':p1,'d':p2}, fast=False))
 
+def test_with_assigns3_1():
+    p1 = (1,2)
+    p2 = [1,2]    
+    assertEqual(
+        "p1=(1,2)\np2=[1,2]\n{'a':p1,'c':p1,'b':p2,'d':p2}", 
+        pyon.dumps({'a':p1,'b':p2,'c':p1,'d':p2}, 
+        fast=False, given={'p1':p1, 'p2':p2}))
+    
 def test_with_assigns4():
     d = {'a':'foo'}
     d['b'] = d
+    print(pyon.dumps(d, fast=False, given={'d':d}))
+
+def test_with_assigns4_1():
+    d = {'a':'foo'}
+    d['b'] = d
     print(pyon.dumps(d, fast=False))
+    
+def test_with_assigns5():
+    d = ['foo']
+    e = ['bar']
+    d.append(e)
+    e.append(d)
+    print(pyon.dumps([e,d], fast=False, given={'d':d,'e':e}))
     
 def test_class1():
     class C(object):
@@ -75,7 +97,7 @@ def test_recursive_class():
 
     c= C()
     c.parent = c
-    assertEqual("_p__0=C()\n_p__0.parent=_p__0\n_p__0", pyon.dumps(c, fast=False))
+    assertEqual("_p__0=C(parent=_p__0)\n_p__0", pyon.dumps(c, fast=False))
 
 
 def test_class2():
@@ -143,7 +165,24 @@ def test_class6():
     author = Author('the author')
     lst=[Article(author=author, title='Title1'), Article(author=author, title='Title2'), Article(author=author, title='Title3')]
     print(pyon.dumps(lst, fast=False))
-        
+
+def test_cross_reference_class():
+    class C(object):
+        def __reduce__(self):
+            return C, (), self.__dict__
+
+    lst = ['foo']
+    lst.append(lst)
+    d = {'a':'bar','b':lst}
+    d['c'] = d
+    c = C()
+    c.lst = lst
+    c.d = d
+    c.parent = c
+    d['d'] = c
+    text = pyon.dumps([lst,d,c], fast = False, given={'d':d, 'lst':lst})
+    print(text)
+    
     
 def main():
     for name, func in sys.modules['__main__'].__dict__.items():
