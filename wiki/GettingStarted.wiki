@@ -385,7 +385,7 @@ All tests and examples are available in `test` and `examples` directories of the
 ==Limitations==
 
 There are limitations:
-    * state of objects produced by `__getstate__` or `__reduce__` must be a plain dicts;
+    * state of objects produced by `__getstate__` or `__reduce__` (the 2nd item in tuple) must be a plain dicts;
 
 ==Security considerations==
 
