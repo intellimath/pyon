@@ -280,7 +280,7 @@ p2=[1,2]
 >>> pyon.dumps(lst, fast=False)
 _p__0=['foo',_p__0]
 _p__0
->>> pyon.dumps(lst, fast=False, lst=lst)
+>>> pyon.dumps(lst, fast=False, given={'lst':lst})
 lst=['foo',lst]
 lst
 }}}
@@ -293,7 +293,7 @@ lst
 >>> pyon.dumps(d, fast=False)
 _p__0={'a':'foo', 'b':_p__0}
 _p__0
->>> pyon.dumps(d, fast=False, d=d)
+>>> pyon.dumps(d, fast=False, given={'d':d})
 d={'a':'foo', 'b':d}
 d
 }}}
@@ -310,7 +310,7 @@ class C(object):
 >>> pyon.dumps(c, fast=False)
 _p__0=C(parent=_p__0)
 _p__0
->>> pyon.dumps(c, fast=False, c=c)
+>>> pyon.dumps(c, fast=False, given={'c':c})
 c=C(parent=c)
 c
 }}}
@@ -331,7 +331,7 @@ class C(object):
 >>> c.d = d
 >>> c.parent = c
 >>> d['d'] = c
->>> pyon.dumps([lst,d,c], fast = False, lst=lst, d=d)
+>>> pyon.dumps([lst,d,c], fast = False, given={'lst':lst, 'd':d})
 lst=['foo',lst]
 _p__1=C(lst=lst,d=d,parent=_p__1)
 d={'a':'bar','c':d,'b':lst,'d':_p__1}
