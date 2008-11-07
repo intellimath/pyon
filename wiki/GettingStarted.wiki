@@ -31,7 +31,7 @@ Here is a rough definition of the _PyON_:
     <tuple> ::= ( <expr>, ..., <expr> ) 
     <dict> ::= { <expr> : <expr>, ..., <expr> : <expr> } 
     <instance> ::= <name> ( <args>, <kw>, <starargs>, <starkw> ) 
-    <args> ::=  <pyon_expr>, ..., <pyon_expr> 
+    <args> ::=  <expr>, ..., <expr> 
     <kw> := <name> = <expr>, ..., <name> = <expr> 
     <starargs> ::= *<list>
     <starargs> ::= *<tuple> 
