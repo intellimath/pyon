@@ -1,14 +1,22 @@
 #labels Featured
 Python object notation (_PyON_) is designed to literal representation of objects based on the syntax of the python language.
 
-In Javascript _JSON_ is a native literal notation for objecs built-in into the language. You can just evaluate _JSON_ string to reconstruct object. 
+In Javascript _JSON_ is a native literal notation for objects built-in into the language. You can just evaluate _JSON_ string to reconstruct object. 
 
 The reason for the introduction of this notation lies in the following considerations:
 
-  * Python now hasn't built-in into the language literal notation for objects representation.    
+  * Python now hasn't built-in into the language literal notation for reconstructable objects representation.    
 
   * Python has great `pickle` module. It allows you to serialize/deserialize python objects that supports _pickle protocol_. But pickle's formats are not suitable for reading/writing human.    
 
   * Python has good `ast` module now. It is possible now to use the python language syntax for the literal representation of objects.
 
-In _PyON_ we have attempted to join the pickle protocol 3 and current syntax of the python language for literal representation of python objects.
+In _PyON_ we have attempted to join the pickle protocol and current syntax of the python language for reconstructable literal representation of python objects.
+
+There some features of PyON:
+
+   * _PyON_ dosn't use `exec` or `eval` during objects reconstruction anyway.
+
+   * _PyON_ allows a programmer to manage the process of resolving names in order to control security during object reconstruction.
+
+   * _PyON_ supports raw and pretty string representation of python objects.
