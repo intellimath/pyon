@@ -17,6 +17,6 @@ There some features of PyON:
 
    * _PyON_ dosn't use `exec` or `eval` during object reconstruction anyway.
 
-   * _PyON_ allows a programmer to manage the process of resolving names in order to control security during object reconstruction.
+   * _PyON_ allows a programmer to manage the process of resolving names.
 
    * _PyON_ supports raw and pretty string dumping mode.
