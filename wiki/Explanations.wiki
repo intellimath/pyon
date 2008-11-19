@@ -9,8 +9,6 @@ The reason for the introduction of this notation lies in the following considera
 
   * Python has great `pickle` module. It allows you to serialize/deserialize python objects that supports _pickle protocol_. But pickle's formats are not suitable for reading/writing human.    
 
-  * Python has good `ast` module now. It is possible now to use the python language syntax for the literal representation of objects.
-
 In _PyON_ we have attempted to join the pickle protocol and current syntax of the python language for reconstructable literal representation of python objects.
 
 There some features of PyON:
