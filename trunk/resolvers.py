@@ -1,4 +1,27 @@
+# The MIT License
 #
+# Copyright (c) 2008 
+# Shibzoukhov Zaur Moukhadinovich
+# szport@gmail.com
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 import sys
 
 def defaultResolver(use_modules = True, given={}):
@@ -8,12 +31,15 @@ def defaultResolver(use_modules = True, given={}):
         _dict.update(given)
     return dictResolver(_dict, use_modules)
     
-def dictResolver(_dict, use_modules=True):
+def dictResolver(mapping, use_modules=True, given = {}):
+        _dict = dict(mapping)
+        _dict.update(given)
         if use_modules:
             def resolver(name):
                 try:
                     return _dict[name]
                 except: pass
+                __import__(name, level=0)
                 return sys.modules[name]
             return resolver
         else:
@@ -22,42 +48,41 @@ def dictResolver(_dict, use_modules=True):
             return resolver
 
 def customResolver(nameResolver, use_modules=True, given={}):
-    localsDict = dict(given)
-    if localsDict:
+    if given:
         if use_modules:
             def resolver(name):
                 try:
-                    return nameResolver(name)
+                    return given[name]
                 except: pass
                 try:
-                    return localsDict[name]
+                    return nameResolver(name)
                 except: pass
+                __import__(name, level=0)
                 return sys.modules[name]
             return resolver
         else:
             def resolver(name):
                 try:
-                    return nameResolver(name)
+                    return given[name]
                 except: pass
                 try:
-                    return localsDict[name]
+                    return nameResolver(name)
                 except: pass
             return resolver
     else:
         if use_modules:
             def resolver(name):
-                return nameResolver(name)
+                try:
+                    return nameResolver(name)
+                except: pass
+                __import__(name, level=0)
                 return sys.modules[name]
             return resolver
         else:
             return nameResolver
 
-safe_cache = {}
 def safeNameResolver(name):
-    C = safe_cache.get(name, None)
-    if C is None:
-        C = safe_cache[name] = type(name, (_Element_,), {'__module__' : '__cache__'})
-    return C
+    return type(name, (_Element_,), {'__module__' : '__cache__'})
 
 class _Element_(object):
     #
@@ -72,15 +97,15 @@ class _Element_(object):
     #
     @property
     def args(self):
-        return self.__args
+        return self._args__
     #
     @property
     def sequence(self):
-        return self.__sequence
+        return self._sequence__
     #
     @property
     def mapping(self):
-        return self.__mapping
+        return self._mapping__
     #
     def append(self, item):
         self.sequence.append(item)

@@ -52,7 +52,7 @@ def test_dict():
 def test_with_assigns1():
     p1 = (1,2)
     p2 = [1,2]    
-    assertEqual("_p__0=(1,2)\n_p__1=[1,2]\n[_p__0,_p__1,_p__0,_p__1]", pyon.dumps([p1,p2,p1,p2]))
+    assertEqual("p1=(1,2)\np2=[1,2]\n[p1,p2,p1,p2]", pyon.dumps([p1,p2,p1,p2]))
     assertEqual("[(1,2),[1,2],(1,2),[1,2]]", pyon.dumps([p1,p2,p1,p2], fast=True))
 
 def test_with_assigns1_1():
@@ -64,13 +64,13 @@ def test_with_assigns1_1():
 def test_with_assigns2():
     lst = ['foo']
     lst.append(lst)
-    assertEqual("_p__0=['foo',_p__0]\n_p__0", pyon.dumps(lst))
+    assertEqual("lst=['foo',lst]\nlst", pyon.dumps(lst))
  
 def test_with_assigns3():
     p1 = (1,2)
     p2 = [1,2]    
     assertEqual(
-        "_p__0=(1,2)\n_p__1=[1,2]\n{'a':_p__0,'c':_p__0,'b':_p__1,'d':_p__1}", 
+        "p1=(1,2)\np2=[1,2]\n{'a':p1,'c':p1,'b':p2,'d':p2}", 
         pyon.dumps({'a':p1,'b':p2,'c':p1,'d':p2}))
 
 def test_with_assigns3_1():
@@ -91,7 +91,7 @@ def test_with_assigns4_1():
     d = {'a':'foo'}
     d['b'] = d
     assertEqual(
-        "_p__0={'a':'foo','b':_p__0}\n_p__0",
+        "d={'a':'foo','b':d}\nd",
         pyon.dumps(d))
     
 def test_with_assigns5():
@@ -119,7 +119,7 @@ def test_recursive_class():
 
     c= C()
     c.parent = c
-    assertEqual("_p__0=C(parent=_p__0)\n_p__0", pyon.dumps(c))
+    assertEqual("c=C(parent=c)\nc", pyon.dumps(c))
 
 
 def test_class2():
@@ -190,7 +190,7 @@ def test_class6():
     author = Author('the author')
     lst=[Article(author=author, title='Title1'), Article(author=author, title='Title2'), Article(author=author, title='Title3')]
     assertEqual(
-        "_p__0=Author('the author')\n[Article(author=_p__0,title='Title1'),Article(author=_p__0,title='Title2'),Article(author=_p__0,title='Title3')]",
+        "author=Author('the author')\n[Article(author=author,title='Title1'),Article(author=author,title='Title2'),Article(author=author,title='Title3')]",
         pyon.dumps(lst))
     print(pyon.dumps(lst, pretty=True))
     
@@ -210,8 +210,11 @@ def test_cross_reference_class():
     c.parent = c
     d['d'] = c
     assertEqual(
-        "lst=['foo',lst]\n_p__1=C(lst=lst,d=d,parent=_p__1)\nd={'a':'bar','c':d,'b':lst,'d':_p__1}\n[lst,d,_p__1]",
+        "lst=['foo',lst]\nc=C(lst=lst,d=d,parent=c)\nd={'a':'bar','c':d,'b':lst,'d':c}\n[lst,d,c]",
         pyon.dumps([lst,d,c], given={'d':d, 'lst':lst}))
+    #print('1:', pyon.dumps([lst,d,c]))
+    #print('2:', pyon.dumps([lst,d,c], given=pyon.currentScope()))
+
 '''
 def test_class_def1():
     class Entity(type):
