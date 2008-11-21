@@ -1,4 +1,27 @@
+# The MIT License
 #
+# Copyright (c) 2008 
+# Shibzoukhov Zaur Moukhadinovich
+# szport@gmail.com
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 import sys
 import ast
 from pyon.resolvers import defaultResolver, customResolver, safeNameResolver
@@ -39,6 +62,9 @@ class NodeTransformer(object):
         self.nameResolver = nameResolver
         self.assigns = {}
         self.post_actions = []
+    #
+    def visit(self, astTree):
+        return visit(self, astTree)
 
 def visit(self, state):
     method = method_cache.get(state.__class__.__name__, None)
@@ -100,6 +126,18 @@ def visit_Assign(self, node):
 def visit_Tuple(self, node):
     return tuple(visit(self, el) for el in node.elts)
 #
+def visit_iter_Sequence(self, node):
+    if node.__class__ in (ast.Tuple, ast.List):
+        return (visit(self, el) for el in node.elts)
+    else:
+        return visit(self, node)
+#
+def visit_iter_Mapping(self, node):
+    if node.__class__ is ast.Dict:
+        return ((visit(self, key), visit(self, value)) for key, value in zip(node.keys, node.values))
+    else:
+        return visit(self, node)
+#
 @cache_method('List')
 def visit_List(self, node):
     lst = []
@@ -133,18 +171,13 @@ def visit_Dict(self, node):
                 _dict[_key] = item
             except PyonResolveError:
                 def setitem(map=_dict, key=_key, name=value):
+                    print(id(map))
                     map[key] = visit_Name(self, name)
                 self.post_actions.append(setitem)
         else:
             _dict[_key] = visit(self, value)
     return _dict    
-    
-def visit_pyon(self, callee, *args, **kwargs):
-    if callee == IF:
-        return IF(self, *args, **kwargs)
-    elif callee == CASE:
-        return CASE(self, *args, **kwargs)
-    
+        
 @cache_method('Call')
 def visit_Call(self, node):
     callee = visit(self, node.func)
@@ -174,17 +207,13 @@ def visit_Call(self, node):
                         self.post_actions.append(_setattr)
                 else:
                     setattr(instance, keyword.arg, visit(self, valueTree))
-                
-                        
 
     if node.starargs:
-        starargs = visit(self, node.starargs)
-        for arg in starargs:
+        for arg in visit_iter_Sequence(self, node.starargs):
             instance.append(arg)
 
     if node.kwargs:
-        starkwargs = visit(self, node.kwargs)
-        for key,arg in starkwargs.items():
+        for key, arg in visit_iter_Mapping(self, node.kwargs):
             instance[key] = arg
     
     return instance
@@ -216,16 +245,14 @@ def visit_Str(self, node):
 def visit_Bytes(self, node):
     return node.s
 
-def loads(source, resolver=None, use_modules = False, given={}, safe=False):    
+def loads(source, resolver=None, given={}, safe=False):    
 
     if safe:
         nameResolver = safeNameResolver
     elif resolver is None:
-        nameResolver = defaultResolver(use_modules, given)
-    elif type(resolver) == dict:
-        nameResolver = dictResolver(resolver, use_modules, given)
-    elif use_modules or given:
-        nameResolver = customResolver(resolver, use_modules, given)
+        nameResolver = defaultResolver(True, given)
+    else:
+        nameResolver = resolver
 
     transformer = NodeTransformer(nameResolver)
     if issubclass(type(source), str):
