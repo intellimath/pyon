@@ -23,6 +23,9 @@ def test_bool():
     assertEqual('True', pyon.dumps(True))
     assertEqual('False', pyon.dumps(False))
 
+def test_bytes():
+    assertEqual("b'abs'", pyon.dumps(b'abs'))
+
 def test_long():
     assertEqual('1000000000000000', pyon.dumps(1000000000000000))
 
@@ -30,9 +33,9 @@ def test_Decimal():
     assertEqual("decimal.Decimal('3.14')", pyon.dumps(Decimal('3.14')))
     assertEqual("decimal.Decimal('-3.14')", pyon.dumps(Decimal('-3.14')))
     assertEqual(
-        "[decimal.Decimal('-3.14'),decimal.Decimal('3.14')]", 
+        "[decimal.Decimal('-3.14'),decimal.Decimal('3.14')]",
         pyon.dumps([Decimal('-3.14'),Decimal('3.14')], given={'decimal':Decimal}))
-    
+
 def test_string():
     assertEqual("'abs'", pyon.dumps('abs'))
 
@@ -45,41 +48,49 @@ def test_tuple():
     assertEqual("(1,)", pyon.dumps((1,)))
     assertEqual("()", pyon.dumps(()))
 
+def test_set():
+    assertEqual("{True,2,'abc',(1,2,3)}", pyon.dumps({True,2,'abc',(1,2,3)}))
+    assertEqual("set()", pyon.dumps(set()))
+
+def test_frozenset():
+    assertEqual("frozenset([True,2,'abc',(1,2,3)])", pyon.dumps(frozenset([True,2,'abc',(1,2,3)])))
+    assertEqual("frozenset()", pyon.dumps(frozenset()))
+
 def test_dict():
     assertEqual("{'a':1,(1,2):True,'abc':3}", pyon.dumps({'a': 1, 'abc': 3, (1, 2): True}))
     assertEqual("{}", pyon.dumps({}))
 
 def test_with_assigns1():
     p1 = (1,2)
-    p2 = [1,2]    
+    p2 = [1,2]
     assertEqual("p1=(1,2)\np2=[1,2]\n[p1,p2,p1,p2]", pyon.dumps([p1,p2,p1,p2]))
     assertEqual("[(1,2),[1,2],(1,2),[1,2]]", pyon.dumps([p1,p2,p1,p2], fast=True))
 
 def test_with_assigns1_1():
     p1 = (1,2)
-    p2 = [1,2]    
+    p2 = [1,2]
     assertEqual("[(1,2),[1,2]]", pyon.dumps([p1,p2]))
     assertEqual("[(1,2),[1,2],(1,2),[1,2]]", pyon.dumps([p1,p2,p1,p2], fast=True))
-    
+
 def test_with_assigns2():
     lst = ['foo']
     lst.append(lst)
     assertEqual("lst=['foo',lst]\nlst", pyon.dumps(lst))
- 
+
 def test_with_assigns3():
     p1 = (1,2)
-    p2 = [1,2]    
+    p2 = [1,2]
     assertEqual(
-        "p1=(1,2)\np2=[1,2]\n{'a':p1,'c':p1,'b':p2,'d':p2}", 
+        "p1=(1,2)\np2=[1,2]\n{'a':p1,'c':p1,'b':p2,'d':p2}",
         pyon.dumps({'a':p1,'b':p2,'c':p1,'d':p2}))
 
 def test_with_assigns3_1():
     p1 = (1,2)
-    p2 = [1,2]    
+    p2 = [1,2]
     assertEqual(
-        "p1=(1,2)\np2=[1,2]\n{'a':p1,'c':p1,'b':p2,'d':p2}", 
+        "p1=(1,2)\np2=[1,2]\n{'a':p1,'c':p1,'b':p2,'d':p2}",
         pyon.dumps({'a':p1,'b':p2,'c':p1,'d':p2}, given={'p1':p1, 'p2':p2}))
-    
+
 def test_with_assigns4():
     d = {'a':'foo'}
     d['b'] = d
@@ -93,7 +104,7 @@ def test_with_assigns4_1():
     assertEqual(
         "d={'a':'foo','b':d}\nd",
         pyon.dumps(d))
-    
+
 def test_with_assigns5():
     d = ['foo']
     e = ['bar']
@@ -102,7 +113,7 @@ def test_with_assigns5():
     assertEqual(
         "d=['foo',e]\ne=['bar',d]\n[e,d]",
         pyon.dumps([e,d], given={'d':d,'e':e}))
-    
+
 def test_class1():
     class C(object):
         def __reduce__(self):
@@ -169,7 +180,7 @@ def test_class4():
     child2 = Element('child2')
     father.append(child1)
     father.append(child2)
-    
+
     assertEqual("Element('father',name='bill',*[Element('child1'),Element('child2')])", pyon.dumps(father))
     print(pyon.dumps(father, pretty=True))
 
@@ -179,8 +190,7 @@ def test_class6():
             self.name = name
         def __reduce__(self):
             _dict = dict(self.__dict__)
-            name = _dict.pop('name')
-            return Author, (name,), _dict
+            return Author, (), _dict
     class Article(object):
         def __init__(self, **kw):
             self.__dict__.update(kw)
@@ -190,10 +200,10 @@ def test_class6():
     author = Author('the author')
     lst=[Article(author=author, title='Title1'), Article(author=author, title='Title2'), Article(author=author, title='Title3')]
     assertEqual(
-        "author=Author('the author')\n[Article(author=author,title='Title1'),Article(author=author,title='Title2'),Article(author=author,title='Title3')]",
+        "author=Author(name='the author')\n[Article(author=author,title='Title1'),Article(author=author,title='Title2'),Article(author=author,title='Title3')]",
         pyon.dumps(lst))
     print(pyon.dumps(lst, pretty=True))
-    
+
 
 def test_cross_reference_class():
     class C(object):
@@ -220,8 +230,8 @@ def test_class_def1():
     class Entity(type):
         def __reduce__(cls):
             return Entity, (cls.__name__), dict(cls.__dict__)
-    
-    class Attribute(object): 
+
+    class Attribute(object):
         def __init__(self, type, **kwargs):
             self.type = type
             for k,v in kwargs.items():
@@ -230,11 +240,11 @@ def test_class_def1():
             _dict = dict(self.__dict__)
             typeName = _dict.pop('type')
             return Attribute, (typeName,), _dict
-    
+
     class C(object, metaclass=Entity):
         a= Attribute(str, length=16)
         b= Attribute(int)
-    
+
     print(pyon.dumps(C))
     print(pyon.dumps(C, classdef=True))
 '''
@@ -243,8 +253,8 @@ def test_class_def2():
     class Entity(type):
         def __reduce__(cls):
             return Entity, (cls.__name__), dict(cls.__dict__)
-    
-    class Attribute(object): 
+
+    class Attribute(object):
         def __init__(self, type, **kwargs):
             self.type = type
             for k,v in kwargs.items():
@@ -253,19 +263,19 @@ def test_class_def2():
             _dict = dict(self.__dict__)
             typeName = _dict.pop('type')
             return Attribute, (typeName,), _dict
-    
-    class C(object): 
+
+    class C(object):
         __metaclass__ = Entity
         a= Attribute(str, length=16)
         b= Attribute(int)
-    
+
     assertEqual(
         "C",
         pyon.dumps(C))
     assertEqual(
         "Entity('C',(object,),a=Attribute(str,length=16),b=Attribute(int))",
         pyon.dumps(C, classdef=True))
-    
+
 def main():
     for name, func in sys.modules['__main__'].__dict__.items():
         if name.startswith('test_'):

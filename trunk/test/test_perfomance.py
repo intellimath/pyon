@@ -9,12 +9,9 @@ class C(object):
       self.count = count
    #
    def __reduce__(self):
-      _dict = {'name':self.name, 'age':self.age}
-      try:
-          _dict['child'] = self.child
-      except:
-           pass
-      return C, (self.count,), _dict
+      _dict = dict(self.__dict__)
+      count = _dict.pop('count')  
+      return C, (count,), _dict
 
 lst = []
 for i in range(10000):
@@ -35,6 +32,7 @@ print("--- PyON ---")
 
 t0 = time.time()
 text = pyon.dumps(lst, fast=True)
+#print(text)
 t1 = time.time()
 #print('Text length = ', len(text))
 print('pyon dumps:', t1-t0)
@@ -54,13 +52,13 @@ print("--- pickle ---")
 t0 = time.time()
 text = pickle.dumps(lst)
 t1 = time.time()
-#print('Text length = ', len(text))
+print('Text length = ', len(text))
 print('pickle dumps:', t1-t0)
 t2 = time.time()
 obj = pickle.loads(text)
 t3 = time.time()
 print('pickle loads:', t3-t2)
-#print('List length = ',len(obj))
+print('List length = ',len(obj))
 
 print("--- json ---")
 

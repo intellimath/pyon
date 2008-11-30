@@ -1,6 +1,6 @@
 # The MIT License
 #
-# Copyright (c) 2008 
+# Copyright (c) 2008
 # Shibzoukhov Zaur Moukhadinovich
 # szport@gmail.com
 #
@@ -25,6 +25,7 @@
 import sys
 import ast
 from pyon.resolvers import defaultResolver, customResolver, safeNameResolver
+from types import ModuleType
 
 __all__ = ['loads']
 
@@ -51,13 +52,14 @@ def cache_method(name):
         return m
     return func
 
-class NodeTransformer(object):    
+class NodeTransformer(object):
     #
     def __init__(self, nameResolver):
         self.cache = {
-            'True':True, 'False':False, 
-            'object':object, 'type': type, 
+            'True':True, 'False':False,
+            'object':object, 'type': type,
             'int':int, 'string':str, 'bool':bool, 'float':float, 'bytes':bytes,
+            'set':set, 'frozenset':frozenset,
             '_reconstructor':_reconstructor, 'None':None}
         self.nameResolver = nameResolver
         self.assigns = {}
@@ -70,7 +72,7 @@ def visit(self, state):
     method = method_cache.get(state.__class__.__name__, None)
     if method is None:
         raise PyonError('Non supporting AST node ' + state.__class__.__name__)
-        
+
     return method(self, state)
 #
 @cache_method('Module')
@@ -83,7 +85,17 @@ def visit_Expr(self, node):
 #
 @cache_method('Attribute')
 def visit_Attribute(self, node):
-    return getattr(visit(self, node.value), node.attr)
+    #return getattr(visit(self, node.value), node.attr)
+    value = visit(self, node.value)
+    try:
+        return getattr(value, node.attr)
+    except AttributeError as e:
+        if isinstance(value, ModuleType):
+            try:
+                __import__(value.__name__ + '.' + node.attr)
+            except ImportError:
+                raise e
+            return getattr(value, node.attr)
 #
 @cache_method('NoneType')
 def visit_NoneType(self, node):
@@ -127,15 +139,15 @@ def visit_Tuple(self, node):
     return tuple(visit(self, el) for el in node.elts)
 #
 def visit_iter_Sequence(self, node):
-    if node.__class__ in (ast.Tuple, ast.List):
+    try:
         return (visit(self, el) for el in node.elts)
-    else:
+    except:
         return visit(self, node)
 #
 def visit_iter_Mapping(self, node):
-    if node.__class__ is ast.Dict:
+    try:
         return ((visit(self, key), visit(self, value)) for key, value in zip(node.keys, node.values))
-    else:
+    except:
         return visit(self, node)
 #
 @cache_method('List')
@@ -154,12 +166,32 @@ def visit_List(self, node):
             lst.append(visit(self, el))
     return lst
 #
+@cache_method('Set')
+def visit_Set(self, node):
+    lst = set()
+    for i, el in enumerate(node.elts):
+        if el.__class__ is ast.Name:
+            try:
+                lst.add(visit_Name(self, el))
+            except PyonResolveError:
+                def additem(lst=lst, i=i, name=el):
+                    lst.add(visit_Name(self, name))
+                self.post_actions.append(additem)
+        else:
+            lst.add(visit(self, el))
+    return lst
+    #return set(visit(self, el) for el in node.elts)
+#
+@cache_method('Frozenset')
+def visit_Frozenset(self, node):
+    return frozenset(visit(self, el) for el in node.elts)
+#
 @cache_method('Subscript')
 def visit_Subscript(self, node):
    item = visit(self, node.value)
    key = visit(self, node.slice.value)
    return item[key]
-#    
+#
 @cache_method('Dict')
 def visit_Dict(self, node):
     _dict = {}
@@ -171,13 +203,12 @@ def visit_Dict(self, node):
                 _dict[_key] = item
             except PyonResolveError:
                 def setitem(map=_dict, key=_key, name=value):
-                    print(id(map))
                     map[key] = visit_Name(self, name)
                 self.post_actions.append(setitem)
         else:
             _dict[_key] = visit(self, value)
-    return _dict    
-        
+    return _dict
+
 @cache_method('Call')
 def visit_Call(self, node):
     callee = visit(self, node.func)
@@ -186,12 +217,13 @@ def visit_Call(self, node):
         args = tuple(visit(self, arg) for arg in node.args)
     else:
         args = ()
-    
+
     instance = callee(*args)
-    
+
     if node.keywords:
         setstate = getattr(instance, '__setstate__', None)
         if setstate:
+            #if state is None:
             state = dict((keyword.arg, visit(self, keyword.value)) for keyword in node.keywords)
             #state = state.get('__pyon_state__', state)
             setstate(state)
@@ -215,7 +247,7 @@ def visit_Call(self, node):
     if node.kwargs:
         for key, arg in visit_iter_Mapping(self, node.kwargs):
             instance[key] = arg
-    
+
     return instance
 #
 @cache_method('Num')
@@ -245,7 +277,7 @@ def visit_Str(self, node):
 def visit_Bytes(self, node):
     return node.s
 
-def loads(source, resolver=None, given={}, safe=False):    
+def loads(source, resolver=None, given={}, safe=False):
 
     if safe:
         nameResolver = safeNameResolver

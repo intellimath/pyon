@@ -1,22 +1,24 @@
 from pyon import loads, dumps
 
-__all__ = ['Element', 'Item', 'resolverName']
+__all__ = ['Node', 'Leaf', 'resolverName']
 
-cache = {}
 def resolverName(name):
-    func = cache.get(name, None)
-    if func is None:
-        def func(value=None, tag=name):
-            if value is None:
-                e = Element(tag)
-            else:
-                e = Item(tag, value)
-            return e
-        func.__name__ = name
-        cache[name] = func
+    """
+    Return new function for creation
+    of node or leaf with a given tag name
+    or return existing one from the cache.
+    """
+    def func(value=None, tag=name):
+        if value is None:
+            e = Node(tag)
+        else:
+            e = Leaf(tag, value)
+        return e
+    func.__name__ = name
+    func.__module__ = '__cache__'
     return func
 
-class Item(object):
+class Leaf(object):
     def __init__(self, _tag, _value, **kw):
         self._tag = _tag
         self._value = _value
@@ -39,7 +41,7 @@ class Item(object):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-class Element(object):
+class Node(object):
     #
     def __init__(self, _tag, **kw):
         self._tag = _tag
@@ -65,4 +67,35 @@ class Element(object):
     #
     def __setstate__(self, state):
         self.__dict__.update(state)
+
+if __name__ == '__main__':
+    res = loads("""
+menu(id='File',
+  *[ item(id='Open', action='OpenFile'),
+     item(id='Close', action='CloseFile'),
+     menu(id='SendTo',
+       *[ item(id='Desktop', action='SendToDesktop'),
+          item(id='RemoteDesktop', action='SendToRemoteDesktop')
+        ]
+     )
+   ]
+)
+""", resolver=resolverName)
+
+    print(dumps(res, pretty=True))
+
+    res = loads("""
+menu(id='File',
+  *[ item(id='Open', action='OpenFile'),
+     item(id='Close', action='CloseFile'),
+     menu(id='SendTo',
+       *[ item(id='Desktop', action='SendToDesktop'),
+          item(id='RemoteDesktop', action='SendToRemoteDesktop')
+        ]
+     )
+   ]
+)
+""", safe=True)
+
+    print(dumps(res, pretty=True, fast=True))
 
