@@ -23,14 +23,31 @@ def test_long():
 def test_string():
     assertEqual('abs', pyon.loads("'abs'"))
 
+def test_bytes():
+    assertEqual(b'abs', pyon.loads("b'abs'"))
+
 def test_list():
     assertEqual([1, 'abc', True], pyon.loads("[1, 'abc', True]"))
+    assertEqual([], pyon.loads("[]"))
+    assertEqual([2], pyon.loads("[2]"))
 
 def test_tuple():
     assertEqual((1, 'abc', True), pyon.loads("(1, 'abc', True)"))
+    assertEqual((1,), pyon.loads("(1,)"))
+    assertEqual((), pyon.loads("()"))
 
 def test_dict():
     assertEqual({'a':1, 'abc':3.14, (1,2):True}, pyon.loads("{'a':1, 'abc':3.14, (1,2):True}"))
+    assertEqual({}, pyon.loads("{}"))
+    assertEqual({'a':1}, pyon.loads("{'a':1}"))
+
+def test_set():
+    assertEqual({True,2,'abc',(1,2,3)}, pyon.loads("{True,2,'abc',(1,2,3)}"))
+    assertEqual(set(), pyon.loads("set()"))
+
+def test_frozenset():
+    assertEqual(frozenset({True,2,'abc',(1,2,3)}), pyon.loads("frozenset({True,2,'abc',(1,2,3)})"))
+    assertEqual(frozenset(), pyon.loads("frozenset()"))
 
 def test_class1():
     class C(object):
@@ -66,6 +83,11 @@ def test_class3():
 
 def test_class4():
     class Element(object):
+        def __new__(cls, tag):
+            inst = super(Element, cls).__new__(cls)
+            inst._tag = tag
+            inst._children = []
+            return inst
         def __init__(self, tag):
             self._tag = tag
             self._children = []
@@ -82,10 +104,12 @@ def test_class4():
 
 def test_class5():
     class Element(object):
-        def __init__(self, tag):
-            self._tag = tag
-            self._children = []
-            self._options = {}
+        def __new__(cls, tag):
+            inst = super(Element,cls).__new__(cls)
+            inst._tag = tag
+            inst._children = []
+            inst._options = {}
+            return inst
         def __setstate__(self, state):
             self.__dict__.update(state)
         def append(self, e):
@@ -106,7 +130,7 @@ def test_class6():
             self.name = name
     class Article(object):
         pass
-    
+
     c = pyon.loads(
 """
 author = Author('the author')
@@ -117,7 +141,49 @@ author = Author('the author')
     assertEqual(c[0].title, 'Title1')
     assertEqual(c[1].title, 'Title2')
     assertEqual(c[2].title, 'Title3')
-    
+
+"""
+def test_class7():
+    class C(object):
+       def __init__(self, a, b, c=5, *args, d, e='abc', **kwargs):
+           self.a = a
+           self.b = b
+           self.c = c
+           self.args = args
+           self.d = d
+           self.e = e
+           self.kwargs = kwargs
+           
+    c = pyon.loads("C(1, 2, d='a')")
+    assertEqual(c.a, 1)
+    assertEqual(c.b, 2)
+    assertEqual(c.c, 5)
+    assertEqual(c.args, ())
+    assertEqual(c.d, 'a')
+    assertEqual(c.e, 'abc')
+    assertEqual(c.kwargs, {})
+
+def test_class8():
+    class C(object):
+       def __init__(self, a, b, c=5, *args, d, e='abc', **kwargs):
+           self.a = a
+           self.b = b
+           self.c = c
+           self.args = args
+           self.d = d
+           self.e = e
+           self.kwargs = kwargs
+           
+    c = pyon.loads("C(1, 2, 3, 4, 5, 6, d='a', e='b', f='d', h='e')")
+    assertEqual(c.a, 1)
+    assertEqual(c.b, 2)
+    assertEqual(c.c, 3)
+    assertEqual(c.args, (4, 5, 6))
+    assertEqual(c.d, 'a')
+    assertEqual(c.e, 'b')
+    assertEqual(c.kwargs, {'f':'d', 'h':'e'})
+"""
+
 def test_recursive_list():
     lst = pyon.loads(
 """
@@ -167,7 +233,7 @@ d = {'a':'foo', 'b':d, 'c':lst, 'd':c}
 [d, lst, c]
 """)
     lst = ob[1]
-    d = ob[0]        
+    d = ob[0]
     c = ob[2]
     assert c.parent is c
     assert c.lst is lst
@@ -177,7 +243,7 @@ d = {'a':'foo', 'b':d, 'c':lst, 'd':c}
     assert d['c'] is lst
     assert d['d'] is c
     assert lst[3] is c
-    
+
 def main():
     for name, func in sys.modules['__main__'].__dict__.items():
         if name.startswith('test_'):

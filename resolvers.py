@@ -1,6 +1,6 @@
 # The MIT License
 #
-# Copyright (c) 2008 
+# Copyright (c) 2008
 # Shibzoukhov Zaur Moukhadinovich
 # szport@gmail.com
 #
@@ -30,7 +30,7 @@ def defaultResolver(use_modules = True, given={}):
     if given:
         _dict.update(given)
     return dictResolver(_dict, use_modules)
-    
+
 def dictResolver(mapping, use_modules=True, given = {}):
         _dict = dict(mapping)
         _dict.update(given)

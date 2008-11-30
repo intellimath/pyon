@@ -1,6 +1,6 @@
 # The MIT License
 #
-# Copyright (c) 2008 
+# Copyright (c) 2008
 # Shibzoukhov Zaur Moukhadinovich
 # szport@gmail.com
 #
@@ -22,8 +22,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 NoneType = type(None)
+from types import BuiltinFunctionType, BuiltinMethodType, FunctionType, MethodType
+
+from sys import version_info
+py_version = version_info[0]*10 + version_info[1]
+if py_version >= 30:
+    simpleTypes = (NoneType, int, str, bool, float, bytes)
+else:
+    simpleTypes = (NoneType, int, long, str, bool, float, bytes)
+
+constants = ((), frozenset())
 
 class Cacher(object):
     #
@@ -39,13 +48,12 @@ def cache_method(name):
     return func
 
 def visit(self, o):
-    if type(o) in (NoneType, int, str, bool, float):
+    if type(o) in simpleTypes:
         return
-    
-    #if isinstance(o, type):
-    #    visit_type(self, o)
-    #    return
-    
+
+    if o in constants:
+        return
+
     oId = id(o)
     if oId in self.objects_cache:
         info = self.objects_info[oId]
@@ -54,11 +62,21 @@ def visit(self, o):
     else:
         self.objects_cache[oId] = o
         self.objects_info[oId] = 0
-        method = method_cache.get(o.__class__.__name__, visit_object) 
+        method = method_cache.get(o.__class__.__name__, visit_object)
         method(self, o)
 #
 @cache_method('list')
 def visit_list(self, o):
+    for item in o:
+        visit(self, item)
+#
+@cache_method('set')
+def visit_set(self, o):
+    for item in o:
+        visit(self, item)
+#
+@cache_method('frosenset')
+def visit_frozenset(self, o):
     for item in o:
         visit(self, item)
 #
@@ -87,9 +105,9 @@ def visit_dict(self, o):
 
 @cache_method('property')
 def visit_property(self, o):
-    for f in (o.fget, o.fset, o.fdel, o.__doc__): 
+    for f in (o.fget, o.fset, o.fdel, o.__doc__):
         if f is not None:
-            visit(self, f) 
+            visit(self, f)
 
 @cache_method('function')
 def visit_function(self, o):
@@ -102,24 +120,24 @@ def visit_method(self, o):
 @cache_method('builtin_function_or_method')
 def visit_builtin_function_or_method(self, o):
     return
-        
+
 @cache_method('object')
 def visit_object(self, o):
     if isinstance(o, type):
         return visit_type(self, o)
-        
+
     reduce = getattr(o, '__reduce__', None)
     if reduce:
         state = reduce()
         return with_reduce(self, state)
     else:
         newname = o.__class__.__name__
-        
+
         newargs = None
         getnewargs = getattr(o, '__getnewargs__', None)
         if getnewargs:
             newargs = getnewargs()
-        
+
         state = None
         getstate = getattr(o, '__getstate__', None)
         if getstate:

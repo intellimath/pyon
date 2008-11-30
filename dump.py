@@ -1,6 +1,6 @@
 # The MIT License
 #
-# Copyright (c) 2008 
+# Copyright (c) 2008
 # Shibzoukhov Zaur Moukhadinovich
 # szport@gmail.com
 #
@@ -40,7 +40,8 @@ null = object()
 NoneType = type(None)
 from types import BuiltinFunctionType, BuiltinMethodType, FunctionType, MethodType
 
-py_version = sys.version_info[0]*10+sys.version_info[1]
+from sys import version_info
+py_version = version_info[0]*10 + version_info[1]
 if py_version >= 30:
     simpleTypes = (NoneType, int, str, bool, float, bytes)
 else:
@@ -84,7 +85,8 @@ class DumpContext(object):
         self.classdef = classdef
         self.assigns = []
         self.pretty = pretty
-        self.nl = pretty and os.linesep or ''
+        #self.nl = pretty and os.linesep or ''
+        self.nl = pretty and '\n' or ''
         self.reprs = {}
         self.typeNames = {}
         self.prefix = prefix
@@ -95,25 +97,25 @@ class DumpContext(object):
         self.n = 0
 
 def dump_it(self, text, offset, start=None):
-    if start is None:    
+    if start is None:
         return self.nl + offset + text
     else:
         return start + text
-    
+
 def visit(self, o, offset, start=None):
 
     if isinstance(o, type):
         return visit_type(self, o, offset, start)
 
     method = method_cache.get(o.__class__, visit_object)
-    if start is None:    
+    if start is None:
         real_offset = self.nl + offset
     else:
         real_offset = start
-    
+
     if method is repr:
         return real_offset + repr(o)
-        
+
     if self.fast:
         return method(self, o, offset, start)
     else:
@@ -123,7 +125,7 @@ def visit(self, o, offset, start=None):
             if varName is None:
                 varName = self.given.get(oId, self.prefix + str(self.n))
                 self.n += 1
-               
+
                 self.reprs[oId] = varName
 
                 oRepr = method(self, o, '', start)
@@ -141,12 +143,21 @@ def visit_property(self, o, offset, start=None):
 @cache_method(list)
 def visit_list(self, o, offset, start=None):
     offset1 = self.pretty and offset + '  ' or ''
-    return '[' + dump_items(self, o, offset1) + dump_it(self, ']', offset)
+    n = len(o)
+    if n == 0:
+        return '[]'
+    elif n == 1:
+        return '[' + visit(self, o[0], offset1).lstrip() + ']'
+    else:
+        return '[' + dump_items(self, o, offset1) + dump_it(self, ']', offset)
 #
 @cache_method(tuple)
 def visit_tuple(self, o, offset, start=None):
     offset1 = self.pretty and offset + ' ' or ''
-    if len(o) == 1:
+    n = len(o)
+    if n == 0:
+        return '()'
+    elif n == 1:
         return '(' + visit(self, o[0], offset1).lstrip() + ',)'
     else:
         return '(' + dump_items(self, o, offset1) + dump_it(self, ')', offset)
@@ -154,7 +165,36 @@ def visit_tuple(self, o, offset, start=None):
 @cache_method(dict)
 def visit_dict(self, o, offset, start=None):
     offset1 = self.pretty and offset + '  ' or ''
-    return '{' + dump_mapping(self, o, offset1) + dump_it(self, '}', offset)
+    n = len(o)
+    if n == 0:
+        return '{}'
+    elif n == 1:
+        key, value = o.popitem()
+        return '{' + visit(self, key, offset1) + ':' + visit(self, value, offset1, '') + '}'
+    else:
+        return '{' + dump_mapping(self, o, offset1) + dump_it(self, '}', offset)
+#
+@cache_method(set)
+def visit_set(self, o, offset, start=None):
+    offset1 = self.pretty and offset + '  ' or ''
+    n = len(o)
+    if n == 0:
+        return 'set()'
+    elif n == 1:
+        return '{' + visit(self, o.pop(), offset1).lstrip() + '}'
+    else:
+        return '{' + dump_items(self, o, offset1) + dump_it(self, '}', offset)
+#
+@cache_method(frozenset)
+def visit_frozenset(self, o, offset, start=None):
+    offset1 = self.pretty and offset + '  ' or ''
+    n = len(o)
+    if n == 0:
+        return 'frozenset()'
+    elif n == 1:
+        return 'frozenset([' + visit(self, o.pop(), offset1).lstrip() + '])'
+    else:
+        return 'frozenset([' + dump_items(self, o, offset1) + dump_it(self, '])', offset)
 #
 def dump_items(self, items, offset, start=None):
     return ','.join(visit(self, item, offset, start) for item in items)
@@ -163,7 +203,7 @@ def dump_mapping(self, mapping, offset, start=None):
     return ','.join(visit(self, k, offset) + ':' + visit(self, v, offset, '') for k, v in mapping.items())
 #
 def dump_kwitems(self, kwitems, offset, start=None):
-    if start is None:    
+    if start is None:
         real_offset = self.nl + offset
     else:
         real_offset = start
@@ -199,7 +239,7 @@ def visit_type(self, o, offset, start=None):
         return name
 
     offset1 = self.pretty and offset + '  ' or ''
-        
+
     try:
         metatype = o.__metaclass__
     except:
@@ -218,7 +258,7 @@ def visit_type(self, o, offset, start=None):
                 name = factory.__module__ + '.' + factory.__name__
             else:
                 name = factory.__class__.__module__ + '.' + factory.__name__
-                
+
         ret = name + '('
         if args:
             ret += dump_items(self, args, offset1) + ','
@@ -247,7 +287,7 @@ def visit_object(self, o, offset, start=None):
     reduce = dispatch_table.get(type(o))
     if reduce:
         rv = reduce(obj)
-    
+
     reduce = getattr(o, '__reduce_ex__', None)
     if reduce:
         state = reduce(3)
@@ -263,7 +303,7 @@ def visit_object(self, o, offset, start=None):
 def with_reduce(self, o, state, offset, start=None):
     name = visit(self, state[0], offset).lstrip()
     offset1 = self.pretty and offset + '  ' or ''
-    if start is None:    
+    if start is None:
         real_offset = self.nl + offset1
     else:
         real_offset = offset + start
@@ -293,12 +333,12 @@ def with_reduce(self, o, state, offset, start=None):
 #
 def without_reduce(self, o, offset=None):
     clsname = o.__class__.__name__
-    
+
     newargs = None
     getnewargs = getattr(o, '__getnewargs__', None)
     if getnewargs:
         newargs = getnewargs()
-    
+
     state = None
     if hasattr(o, '__getstate__'):
         state = o.__getstate__()
@@ -333,13 +373,13 @@ def dumps(o, fast=False, classdef=False, pretty=False, given=None):
         dumpcache.visit(cacher, o)
         objects_info = dict((oId,n) for oId,n in cacher.objects_info.items() if n > 0)
         objects_cache = dict((oId,o) for oId,o in cacher.objects_cache.items() if oId in objects_info)
-    
+
     _given = currentScope(given=given, level=2)
-    
+
     context = DumpContext(fast=fast, classdef=classdef, given=_given, pretty=pretty)
     if not fast:
         context.objects_cache = objects_cache
-        
+
     text = visit(context, o, '').lstrip()
     if context.assigns:
         assigns = "\n".join(context.assigns)

@@ -76,7 +76,7 @@ print(s)
 
 tree = loads(text, resolver)
 
-s1 = dumps(tree)
+s1 = dumps(tree, fast=True, pretty=True)
 print(s1)
 
 print(s == s1)
@@ -90,7 +90,7 @@ t1 = time.time()
 print(t1-t0)
 
 etree_text = tostring(tree)
-pyon_text = dumps(tree)
+pyon_text = dumps(tree, fast=True)
 
 t0 = time.time()
 tree = loads(pyon_text, resolver)
