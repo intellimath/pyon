@@ -45,6 +45,32 @@ def test_set():
     assertEqual({True,2,'abc',(1,2,3)}, pyon.loads("{True,2,'abc',(1,2,3)}"))
     assertEqual(set(), pyon.loads("set()"))
 
+def test_USub():
+    a = 10
+    assertEqual(-10, pyon.loads("-a"))
+
+def test_Compare():
+    a = 10
+    b = 20
+    assertEqual(True, pyon.loads("a<b"))
+    assertEqual(True, pyon.loads("a<=b"))
+    assertEqual(False, pyon.loads("a==b"))
+    assertEqual(True, pyon.loads("a!=b"))
+    assertEqual(False, pyon.loads("a>b"))
+    assertEqual(False, pyon.loads("a>=b"))
+
+def test_If():
+    a = 10
+    b = 20
+    text = """
+if a > b:
+   x = a
+else:
+   x = b
+x
+"""
+    assertEqual(20, pyon.loads(text))
+    
 def test_frozenset():
     assertEqual(frozenset({True,2,'abc',(1,2,3)}), pyon.loads("frozenset({True,2,'abc',(1,2,3)})"))
     assertEqual(frozenset(), pyon.loads("frozenset()"))
@@ -142,7 +168,6 @@ author = Author('the author')
     assertEqual(c[1].title, 'Title2')
     assertEqual(c[2].title, 'Title3')
 
-"""
 def test_class7():
     class C(object):
        def __init__(self, a, b, c=5, *args, d, e='abc', **kwargs):
@@ -163,6 +188,24 @@ def test_class7():
     assertEqual(c.e, 'abc')
     assertEqual(c.kwargs, {})
 
+def test_class7_1():
+    class C(object):
+       def __init__(self, a, b, c=5, *args, d, e='abc'):
+           self.a = a
+           self.b = b
+           self.c = c
+           self.args = args
+           self.d = d
+           self.e = e
+           
+    c = pyon.loads("C(1, 2, d='a')")
+    assertEqual(c.a, 1)
+    assertEqual(c.b, 2)
+    assertEqual(c.c, 5)
+    assertEqual(c.args, ())
+    assertEqual(c.d, 'a')
+    assertEqual(c.e, 'abc')
+    
 def test_class8():
     class C(object):
        def __init__(self, a, b, c=5, *args, d, e='abc', **kwargs):
@@ -182,8 +225,25 @@ def test_class8():
     assertEqual(c.d, 'a')
     assertEqual(c.e, 'b')
     assertEqual(c.kwargs, {'f':'d', 'h':'e'})
-"""
 
+def test_class8_1():
+    class C(object):
+       def __init__(self, a, b, c=5, *args, d, e='abc'):
+           self.a = a
+           self.b = b
+           self.c = c
+           self.args = args
+           self.d = d
+           self.e = e
+           
+    c = pyon.loads("C(1, 2, 3, 4, 5, 6, d='a', e='b')")
+    assertEqual(c.a, 1)
+    assertEqual(c.b, 2)
+    assertEqual(c.c, 3)
+    assertEqual(c.args, (4, 5, 6))
+    assertEqual(c.d, 'a')
+    assertEqual(c.e, 'b')
+    
 def test_recursive_list():
     lst = pyon.loads(
 """
