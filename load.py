@@ -25,9 +25,9 @@
 import sys
 import ast
 from pyon.resolvers import defaultResolver, customResolver, safeNameResolver
-from types import ModuleType
+from types import ModuleType, FunctionType, BuiltinFunctionType
 
-__all__ = ['loads']
+__all__ = ['loads', 'execs']
 
 null = object()
 default = object()
@@ -101,30 +101,40 @@ def visit_Attribute(self, node):
 def visit_NoneType(self, node):
     return None
 #
-#@cache_method('Compare')
-#def visit_Compare(self, node):
-#    left = visit(self, node.left)
-#    result = True
-#    for op, node_right in zip(node.ops, node.comparators):
-#        opName = op.__class__.__name__
-#        right = visit(self, node_right)
-#        #print(opName)
-#        if opName == 'Gt':
-#            result = result and left > right
-#        elif opName == 'Lt':
-#            result = result and left < right
-#        elif opName == 'LtE':
-#            result = result and left <= right
-#        elif opName == 'GtE':
-#            result = result and left >= right
-#        elif opName == 'Eq':
-#            result = result and left == right
-#        elif opName == 'NotEq':
-#            result = result and left != right
-#        else:
-#            raise PyonException('Unexpected operation ' + opName)
-#        left = right
-#    return result
+@cache_method('UnaryOp')
+def visit_UnaryOp(self, node):
+    opName = node.op.__class__.__name__
+    if opName == 'Not':
+        return not visit(self, node.operand)
+    elif opName == 'USub':
+        return -visit(self, node.operand)
+    else:
+        raise PyonException('Unexpected unary operation ' + opName)
+#
+@cache_method('Compare')
+def visit_Compare(self, node):
+    left = visit(self, node.left)
+    result = True
+    for op, node_right in zip(node.ops, node.comparators):
+        opName = op.__class__.__name__
+        right = visit(self, node_right)
+        #print(opName)
+        if opName == 'Gt':
+            result = result and left > right
+        elif opName == 'Lt':
+            result = result and left < right
+        elif opName == 'LtE':
+            result = result and left <= right
+        elif opName == 'GtE':
+            result = result and left >= right
+        elif opName == 'Eq':
+            result = result and left == right
+        elif opName == 'NotEq':
+            result = result and left != right
+        else:
+            raise PyonException('Unexpected binary operation ' + opName)
+        left = right
+    return result
 #
 @cache_method('Assign')
 def visit_Assign(self, node):
@@ -166,6 +176,17 @@ def visit_List(self, node):
             lst.append(visit(self, el))
     return lst
 #
+@cache_method('If')
+def visit_If(self, node):
+    test = visit(self, node.test)
+    if test:
+        for st in node.body:
+            visit(self, st)
+    elif node.orelse:
+        for st in node.orelse:
+            visit(self, st)
+    return null
+
 @cache_method('Set')
 def visit_Set(self, node):
     lst = set()
@@ -218,14 +239,47 @@ def visit_Call(self, node):
     else:
         args = ()
 
-    instance = callee(*args)
+    co = None
+    state = None
+    if isinstance(callee, type):
+        try:
+            func = callee.__new__
+            if func != object.__new__:
+                co = func.__code__
+            else:
+                func = callee.__init__
+                if func != object.__init__:
+                    co = func.__code__
+        except:
+            pass
+    elif isinstance(callee, FunctionType):
+        co = callee.__code__
+
+    if co is None:
+        instance = callee(*args)
+    else:
+        kwonlyargcount = getattr(co, 'co_kwonlyargcount', 0)
+        if kwonlyargcount > 0:
+            argcount = co.co_argcount
+            count = argcount + kwonlyargcount
+            kwvarnames = co.co_varnames[argcount:count]
+            state = dict((keyword.arg, visit(self, keyword.value)) for keyword in node.keywords)
+            if co.co_flags & 8:
+                instance = callee(*args, **state)
+            else:
+                kwargs = dict((name,item) for name,item in state.items() if name in kwvarnames)
+                instance = callee(*args, **kwargs)
+        #elif co.co_flags & 8:
+        #    state = dict((keyword.arg, visit(self, keyword.value)) for keyword in node.keywords)
+        #    instance = callee(*args, **state)
+        else:
+            instance = callee(*args)
 
     if node.keywords:
         setstate = getattr(instance, '__setstate__', None)
         if setstate:
-            #if state is None:
-            state = dict((keyword.arg, visit(self, keyword.value)) for keyword in node.keywords)
-            #state = state.get('__pyon_state__', state)
+            if state is None:
+                state = dict((keyword.arg, visit(self, keyword.value)) for keyword in node.keywords)
             setstate(state)
         else:
             for keyword in node.keywords:
@@ -286,15 +340,37 @@ def loads(source, resolver=None, given={}, safe=False):
     else:
         nameResolver = resolver
 
-    transformer = NodeTransformer(nameResolver)
+    context = NodeTransformer(nameResolver)
     if issubclass(type(source), str):
         tree = ast.parse(source)
-        ob = visit(transformer, tree)[-1]
+        ob = visit(context, tree)[-1]
     elif issubclass(type(source), ast.AST):
-        ob = visit(transformer, source)[-1]
+        ob = visit(context, source)[-1]
     else:
         PyonError('Source must be a string or AST', source)
-    if transformer.post_actions:
-        for action in transformer.post_actions:
+    if context.post_actions:
+        for action in context.post_actions:
             action()
     return ob
+
+def execs(source, resolver=None, given={}, safe=False):
+
+    if safe:
+        nameResolver = safeNameResolver
+    elif resolver is None:
+        nameResolver = defaultResolver(True, given)
+    else:
+        nameResolver = resolver
+
+    context = NodeTransformer(nameResolver)
+    if issubclass(type(source), str):
+        tree = ast.parse(source)
+        ob = visit(context, tree)[-1]
+    elif issubclass(type(source), ast.AST):
+        ob = visit(context, source)[-1]
+    else:
+        PyonError('Source must be a string or AST', source)
+    if context.post_actions:
+        for action in context.post_actions:
+            action()
+    return ob, context.assigns

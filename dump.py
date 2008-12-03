@@ -53,8 +53,23 @@ def currentScope(given=None, level=1):
     scope.update(frame.f_locals)
     if given:
         scope.update(given)
-    #print(list(scope.keys()))
     return scope
+
+def _sortkey1(item):
+    key, value = item
+    return type(key).__name__, key, value
+
+def _sortkey2(item):
+    return type(item[0]).__name__
+
+def _safe_sorted(items):
+    try:
+        return sorted(items)
+    except TypeError:
+        try:
+            return sorted(items, key=_sortkey1)
+        except TypeError:
+            return sorted(items, key=_sortkey2)
 
 # cache for visit functions
 method_cache = {}
@@ -80,7 +95,7 @@ MODULE_NAMES = ('__cache__', '__main__', '__builtin__', 'builtins')
 
 class DumpContext(object):
 
-    def __init__(self, fast=False, classdef=False, given=None, prefix='_p__', pretty=False):
+    def __init__(self, fast=False, classdef=False, given=None, prefix='_p__', sorted=False, pretty=False):
         self.fast = fast
         self.classdef = classdef
         self.assigns = []
@@ -90,6 +105,7 @@ class DumpContext(object):
         self.reprs = {}
         self.typeNames = {}
         self.prefix = prefix
+        self.sorted = sorted
         if given:
             self.given = dict((id(o),name) for name, o in given.items())
         else:
@@ -200,6 +216,8 @@ def dump_items(self, items, offset, start=None):
     return ','.join(visit(self, item, offset, start) for item in items)
 #
 def dump_mapping(self, mapping, offset, start=None):
+    if self.sorted:
+        mapping = _safe_sorted(mapping)
     return ','.join(visit(self, k, offset) + ':' + visit(self, v, offset, '') for k, v in mapping.items())
 #
 def dump_kwitems(self, kwitems, offset, start=None):
@@ -207,6 +225,8 @@ def dump_kwitems(self, kwitems, offset, start=None):
         real_offset = self.nl + offset
     else:
         real_offset = start
+    if self.sorted:
+        kwitems = _safe_sorted(kwitems)
     return ','.join(real_offset + k + '=' + visit(self, v, offset, '') for k, v in kwitems.items())
 #
 @cache_method(FunctionType)
@@ -367,7 +387,7 @@ def without_reduce(self, o, offset=None):
     ret += ')'
     return ret
 
-def dumps(o, fast=False, classdef=False, pretty=False, given=None):
+def dumps(o, fast=False, classdef=False, pretty=False, sorted=True, given=None):
     if not fast:
         cacher = dumpcache.Cacher()
         dumpcache.visit(cacher, o)
@@ -376,7 +396,7 @@ def dumps(o, fast=False, classdef=False, pretty=False, given=None):
 
     _given = currentScope(given=given, level=2)
 
-    context = DumpContext(fast=fast, classdef=classdef, given=_given, pretty=pretty)
+    context = DumpContext(fast=fast, classdef=classdef, given=_given, sorted=False, pretty=pretty)
     if not fast:
         context.objects_cache = objects_cache
 
